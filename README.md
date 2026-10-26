@@ -51,11 +51,11 @@ Pi ──(openai-completions)──▶ 本地环回 127.0.0.1:<随机端口>/v1/
 ## 使用
 
 ```bash
-# 确认注册成功（应看到 provider=qwenwork 的 flash / pro / qwen3.8-max-preview）
+# 确认注册成功（应看到 provider=qwenwork 的 qwen3.8-flash / pro / qwen3.8-max-preview）
 pi --list-models qwenwork
 
 # 一次性对话
-pi -p "你好" --model qwenwork/flash
+pi -p "你好" --model qwenwork/qwen3.8-flash
 
 # 交互模式里用 Ctrl+P 切到 qwenwork
 pi --model qwenwork/pro
@@ -63,7 +63,7 @@ pi --model qwenwork/pro
 
 | 模型 id | 档位 | 倍率 | 说明 |
 |---|---|---|---|
-| `flash` | 标准 | ×0.1 | Qwen3.8-Flash，日常首选 |
+| `qwen3.8-flash` | 标准 | ×0.1 | Qwen3.8-Flash，日常首选（旧写法 `flash` 仍可用） |
 | `pro` | 高级 | ×1 | 默认档 |
 | `qwen3.8-max-preview` | Max | ×1.1 | 新 |
 

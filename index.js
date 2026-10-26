@@ -60,7 +60,10 @@ export default async function (pi) {
     // shim 用常量时间比较校验；密钥只在进程内存在，不落盘。
     apiKey: shim.sharedSecret,
     api: 'openai-completions',
-    models: FALLBACK_QWENWORK_MODELS.map((m) => toPiModel(m, shim.baseUrl)),
+    // displayId:true —— pi 的选择器/状态栏只渲染描述符 id，故换用目录声明的
+    // 人类可读全名（qwen3.8-flash）；请求回 shim 后由 normalizeModelKey()
+    // 归一化回上游短 key。DSH 插件侧不传此项，行为不变。
+    models: FALLBACK_QWENWORK_MODELS.map((m) => toPiModel(m, shim.baseUrl, { displayId: true })),
   });
 
   pi.on('session_shutdown', async () => {
