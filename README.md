@@ -2,7 +2,14 @@
 
 让 [Pi 编码代理](https://github.com/earendil-works/pi)（`@earendil-works/pi-coding-agent`）把**千问办公（QwenWorkCN）桌面 App** 当作一个模型 Provider——零配置、无需 API Key，直接复用你已经登录的 App 账号与积分。
 
-本扩展是 DSH 插件 [`dsh-qwen-connect`](https://gitee.com/han-xiaos-whisper/dsh-qwen-connect) 的姊妹项目：二者共用同一套**零外部依赖**的推理链（凭据解密 + 官方同源 WASM 签名 + 本地 OpenAI 兼容网关），只是宿主从 DSH 换成了 Pi。
+本扩展是 DSH 插件 [`dsh-qwen-connect`](https://github.com/xiao-hans/dsh-qwen-connect)（Gitee 镜像 <https://gitee.com/han-xiaos-whisper/dsh-qwen-connect>）的姊妹项目：二者共用同一套**零外部依赖**的推理链（凭据解密 + 官方同源 WASM 签名 + 本地 OpenAI 兼容网关），只是宿主从 DSH 换成了 Pi。
+
+> **来源说明**：`lib/` 与 `research/` 下的推理链代码 vendored 自
+> [gaoqiaoliangjie666/dsh-qwen-connect](https://github.com/gaoqiaoliangjie666/dsh-qwen-connect)
+> 的衍生版（含企业 VPC 支持），原始协议逆向 / WASM 签名成果归属上游作者，MIT 许可。
+> 本仓库只做宿主适配（Pi 扩展入口 `index.js`），未改动推理逻辑。
+> 与 `dsh-qwen-connect` 中的同名文件**逐字节一致**（`chat-shim.js` `4a5646e1…`、
+> `signer-session.js` `4ce5ce60…`）。
 
 ## 工作原理
 
