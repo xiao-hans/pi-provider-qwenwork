@@ -90,6 +90,24 @@ pi --model qwenwork/pro
 - 凭据只在内存中传递；`describeCredentials()` 输出掩码摘要。
 - 扩展不向千问办公上游之外的任何地址发起请求。
 
+## 流收尾语义（为什么回合不会「突然不动」）
+
+长时间任务里最容易出现的症状是：模型忽然没了输出、界面一直转、又没有任何报错。
+根因通常不在模型，而在代理把「异常结束」说成了「正常结束」。本插件的 shim 按下面五条收尾：
+
+| 情况 | shim 行为 |
+|---|---|
+| 已开流后上游静默（首帧前 90s / 首帧后 300s） | 写 `error` 帧 + `[DONE]`，并 abort 上游；下游按错误重试，不会挂在一个永远没有下文的连接上 |
+| 上游没给 finish 帧就断流 | 有产出 → `finish_reason: "length"`（截断如实上报）；无产出 → `error` 帧 + `network_error` |
+| 流里出现过 `tool_calls`，上游却标了 `stop` | 纠正为 `finish_reason: "tool_calls"`，否则下游的 agent 循环会停在工具调用之前 |
+| 整回合只有思考、正文与工具调用都没有 | `error` 帧（`empty_answer`）+ `network_error`，让下游重试（实测过 340s 思考、9.5 万字符思考链、0 正文） |
+| 客户端中途断开 | abort 上游请求，取消的回合立刻停止生成 |
+
+`FIRST_CONTENT_TIMEOUT_MS`（90 秒）此前只有声明和注释、没有代码引用；现在它是真实的
+首帧预算：上游「接了单没排上」的排队态会在 90 秒内明确失败，而不是拖满 300 秒。
+
+回归测试：`node --test test/unit/stream-robustness.test.mjs`。
+
 ## 已知边界
 
 - 复用 App 登录态意味着：App 退出登录后，扩展会随之报未登录，需重新打开 App。
