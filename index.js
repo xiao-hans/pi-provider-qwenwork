@@ -19,6 +19,7 @@
 import { startChatShim } from './lib/chat-shim.js';
 import { getValidCredential } from './lib/credentials-seam.js';
 import { QWENWORK_PROVIDER, FALLBACK_QWENWORK_MODELS, toPiModel } from './lib/models.js';
+import { CONTINUE_PROMPT, MAX_AUTO_CONTINUES, looksLikeAbandonedStep } from './lib/stall-guard.js';
 
 // 同一进程内重载（/reload 或重复加载）时，先关掉上一代 shim，
 // 避免随机端口上的旧 HTTP 服务器堆积。
@@ -66,10 +67,40 @@ export default async function (pi) {
     models: FALLBACK_QWENWORK_MODELS.map((m) => toPiModel(m, shim.baseUrl, { displayId: true })),
   });
 
+  // 模型宣告下一步后直接 stop（见 lib/stall-guard.js）：收工前补一条可见的续跑提示。
+  let autoContinues = 0;
+  pi.on('input', () => {
+    autoContinues = 0;
+    return { action: 'continue' };
+  });
+  pi.on('agent_before_settle', (event) => {
+    if (event.continue || autoContinues >= MAX_AUTO_CONTINUES) return undefined;
+    if (event.outcome !== 'completed' || !endedWithAbandonedStep(event.context.llmMessages)) return undefined;
+    autoContinues += 1;
+    return {
+      entries: [
+        ...event.entries,
+        { type: 'custom_message', customType: 'qwenwork-auto-continue', content: CONTINUE_PROMPT, display: true },
+      ],
+      continue: true,
+    };
+  });
+
   pi.on('session_shutdown', async () => {
     if (globalThis[RUNTIME_KEY] === shim) {
       delete globalThis[RUNTIME_KEY];
       await shim.close().catch(() => {});
     }
   });
+}
+
+function endedWithAbandonedStep(messages) {
+  const last = messages.at(-1);
+  if (last?.role !== 'assistant' || last.provider !== QWENWORK_PROVIDER || last.stopReason !== 'stop') return false;
+  if (last.content.some((block) => block.type === 'toolCall')) return false;
+  const text = last.content
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('');
+  return looksLikeAbandonedStep(text);
 }
