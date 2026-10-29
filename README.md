@@ -7,9 +7,8 @@
 > **来源说明**：`lib/` 与 `research/` 下的推理链代码 vendored 自
 > [gaoqiaoliangjie666/dsh-qwen-connect](https://github.com/gaoqiaoliangjie666/dsh-qwen-connect)
 > 的衍生版（含企业 VPC 支持），原始协议逆向 / WASM 签名成果归属上游作者，MIT 许可。
-> 本仓库只做宿主适配（Pi 扩展入口 `index.js`），未改动推理逻辑。
-> 与 `dsh-qwen-connect` 中的同名文件**逐字节一致**（`chat-shim.js` `4a5646e1…`、
-> `signer-session.js` `4ce5ce60…`）。
+> 本仓库提供 Pi 扩展入口（`index.js`）及流收尾的宿主兼容适配；
+> 凭据、WASM 签名与上游推理协议沿用共享实现。
 
 ## 工作原理
 
@@ -111,7 +110,7 @@ pi --model qwenwork/pro
 
 | 情况 | shim 行为 |
 |---|---|
-| 已开流后上游静默（首帧前 90s / 首帧后 300s） | 写 `error` 帧 + `[DONE]`，并 abort 上游；下游按错误重试，不会挂在一个永远没有下文的连接上 |
+| 已开流后上游静默（首个数据块前 90s / 之后 300s） | 写带 `timeout` 标记的 `error` 帧 + `[DONE]`，并 abort 上游；由 Pi 按既有设置执行有界重试 |
 | 上游没给 finish 帧就断流 | 有产出 → `finish_reason: "length"`（截断如实上报）；无产出 → `error` 帧 + `network_error` |
 | 流里出现过 `tool_calls`，上游却标了 `stop` | 纠正为 `finish_reason: "tool_calls"`，否则下游的 agent 循环会停在工具调用之前 |
 | 整回合只有思考、正文与工具调用都没有 | `error` 帧（`empty_answer`）+ `network_error`，让下游重试（实测过 340s 思考、9.5 万字符思考链、0 正文） |
@@ -120,7 +119,40 @@ pi --model qwenwork/pro
 `FIRST_CONTENT_TIMEOUT_MS`（90 秒）此前只有声明和注释、没有代码引用；现在它是真实的
 首帧预算：上游「接了单没排上」的排队态会在 90 秒内明确失败，而不是拖满 300 秒。
 
-回归测试：`node --test test/unit/stream-robustness.test.mjs`。
+空闲超时消息为 `upstream idle timeout: no data for <N>ms`。Pi 根据错误文本识别
+可重试的传输故障；`timeout` 标记使该错误进入既有重试策略，重试开关、次数和退避
+仍由 Pi 管理。shim 在响应开流后仅报告错误并结束该流，不自行重放请求。
+
+回归测试：`npm test`（`node --test test/unit/stream-robustness.test.mjs`），使用本地
+HTTP 假上游验证部分思考后的空闲超时、正常完成与用量、客户端取消，以及请求关联
+和本地事件循环阻塞的诊断记录。
+
+## 流停滞诊断
+
+诊断事件追加到系统临时目录的 `pi-qwenwork-trace.log`（JSONL，2MB 上限）。
+姊妹包 dsh-qwen-connect 固定写自己的 `dsh-qwen-connect-trace.log`：两边共用
+一个文件时，DSH 的活跃流量会在几十分钟内把本侧的事故记录轮转出上限。
+单测必须用 `QWEN_CONNECT_TRACE_PATH` 把写入重定向到项目内临时目录
+（`test/unit/trace-sandbox.mjs` 已统一处理），否则故障注入的伪数据会混进
+真实排障日志。
+每条事件包含 `source: "pi-provider-qwenwork"`、进程 `pid` 和单次请求的 `requestId`；
+Pi 会话中保存的响应 ID 为 `chatcmpl-<requestId>`，可直接关联日志。同一对话的
+`upstreamSessionId` 与单次请求 ID 分开记录。
+
+| 字段 | 含义 |
+|---|---|
+| `upstreamRequestIds` | 上游响应中的 request/trace 关联头；上游未提供时为空对象 |
+| `lastChunkAt`、`idleMs` | 本地读取循环最后取到原始数据块的时间及距今毫秒数；还未收到数据时，时间为 `null` |
+| `upstreamChunks`、`upstreamBytes` | 本轮读取到的数据块数与字节数 |
+| `thinkingChars`、`outputChars`、`toolCallsEmitted`、`usageSeen` | 思考、正文、工具和用量的进度摘要，不含原文 |
+| `eventLoopDelayMs` | 流读取期间以 20ms 分辨率采样的事件循环延迟 max/p99，已从纳秒换算为毫秒；没有样本时为 `null` |
+| `watchdogDelayMs` | 看门狗回调相对预定时刻的迟到量，使用单调时钟计算 |
+| `abortReason` | 本地终止上游的原因，用于区分空闲超时与客户端取消 |
+
+`idle-watchdog-fired` 与 `stream-end` 会记录完整进度快照。日志只收集指定的关联头，
+不保存提示词、模型输出原文、Authorization 或 Cookie。事件循环延迟与回调迟到量
+用于识别本地阻塞线索；数据块时间是本地读取时间，不是远端生成时间。历史日志中
+缺失的观测字段不能事后补回。
 
 ## 已知边界
 
