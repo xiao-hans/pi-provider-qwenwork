@@ -36,6 +36,20 @@ Pi ──(openai-completions)──▶ 本地环回 127.0.0.1:<随机端口>/v1/
 
 ## 安装
 
+### 从 npm 装（推荐）
+
+```bash
+pi install npm:@xiao-hans/pi-provider-qwenwork
+```
+
+`pi list` 确认已登记；`pi --list-models qwenwork` 应能看到三个档位。想先试一次而不写进 settings：
+
+```bash
+pi -e npm:@xiao-hans/pi-provider-qwenwork
+```
+
+### 手动放进扩展目录
+
 把本目录放进 Pi 的扩展目录即可（Pi 会自动发现含 `index.js` 的子目录）：
 
 ```
@@ -46,7 +60,7 @@ Pi ──(openai-completions)──▶ 本地环回 127.0.0.1:<随机端口>/v1/
 <你的项目>\.pi\extensions\pi-provider-qwenwork\
 ```
 
-无需 `npm install`——本扩展**零运行时 npm 依赖**，`lib/` 与 `research/` 已自带全部实现。
+两种装法都无需 `npm install`——本扩展**零运行时 npm 依赖**，`lib/` 与 `research/` 已自带全部实现。
 
 ## 使用
 

@@ -1,20 +1,51 @@
 {
-  "name": "pi-provider-qwenwork",
+  "name": "@xiao-hans/pi-provider-qwenwork",
   "displayName": "Pi QwenWork Provider",
   "version": "0.1.2",
-  "private": true,
   "type": "module",
   "description": "Pi 编码代理扩展：零配置复用千问办公（QwenWorkCN）桌面 App 的登录态，把它注册为 Pi 内的模型 Provider。",
   "license": "MIT",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
   },
+  "files": [
+    "index.js",
+    "lib/",
+    "research/wasm.bin",
+    "research/qoder-wasm-glue.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xiao-hans/pi-provider-qwenwork.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xiao-hans/pi-provider-qwenwork/issues"
+  },
+  "homepage": "https://github.com/xiao-hans/pi-provider-qwenwork#readme",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "qwenwork",
+    "qwen",
+    "llm-provider",
+    "openai-compatible",
+    "dpapi"
+  ],
   "pi": {
     "extensions": [
       "./index.js"
     ]
   },
   "scripts": {
-    "check": "node --check index.js"
+    "check": "node --check index.js",
+    "prepack": "npm run check",
+    "pack:dry": "npm pack --dry-run"
   }
 }
