@@ -1,0 +1,32 @@
+# 行尾统一：仓库内与签出后都用 LF。
+#
+# 为什么必须这样：`npm pack` 读的是**工作区文件**，不是 git blob。
+# Windows 上 core.autocrlf=true 会把工作区 smudge 成 CRLF，于是发出去的
+# tarball 字节与任何 git blob 都不相等（0.1.2 就踩过：lib/chat-shim.js
+# 发布件 47937 B 含 1081 个 CR，仓库 blob 是 LF 的 89e7b9ae…）。
+# 内容等价、功能无差，但复现校验（逐文件 sha1）会假报警。
+# eol=lf 让签出与工作区保持 LF，pack 结果从此可由仓库字节独立复算。
+* text=auto eol=lf
+
+# 打包进 tarball 的源码，显式声明（不依赖自动猜测）
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+LICENSE text eol=lf
+.gitattributes text eol=lf
+
+# 二进制：绝不做行尾转换。research/wasm.bin 内巧合含 2407 个 CR 字节，
+# 一旦被 text 规则改写，签名器直接起不来（signer-session.js 按
+# path.join(HERE,'..','research','wasm.bin') 加载它）。
+research/*.bin binary
+*.wasm binary
+*.node binary
+*.tgz binary
+*.png binary
+*.jpg binary
+*.gif binary
+research/*.bin -diff
+
+# 日志与临时物不入库也不转换
+*.log text eol=lf
