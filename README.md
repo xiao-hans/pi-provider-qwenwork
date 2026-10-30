@@ -154,6 +154,21 @@ Pi 会话中保存的响应 ID 为 `chatcmpl-<requestId>`，可直接关联日�
 用于识别本地阻塞线索；数据块时间是本地读取时间，不是远端生成时间。历史日志中
 缺失的观测字段不能事后补回。
 
+### 每个请求都必须留下一条终止记录
+
+姊妹包 dsh-qwen-connect 在 2026-10-30 的 502 风暴里遇到 33 条只有 `request-in`、
+之后一行都没有的请求，事后无法归因：部分提前返回分支只回错误不写日志，
+`res.on('close')` 过去要到 SSE 阶段才注册，`readBody()` 在客户端写完半截就断开时
+既不 `end` 也不 `error` 而直接悬挂。本包保持与 `dsh-qwen-connect/lib/chat-shim.js`
+字节一致（仅注释里的宿主名差异）：每个请求恰好一条终止记录——`reject`（带
+`reason`：`method` / `loopback` / `auth` / `body-too-large` / `body-read-failed` /
+`invalid-json` / `no-messages` / `no-user-message` / `signer-session`）、`upstream-fail` /
+`upstream-rejected` / `stream-end`，或 `request-end`（带 `stage` 与 `ended` 标志，
+`ended:false` 为客户端提前断开、`ended:true` 为处理器抛异常后由外层回 500）。
+
+回归测试：`npm test`（含 `test/unit/chat-shim-request-observability.test.mjs`，其中
+一个用例只写半截 JSON 就拆掉 socket，验证它不再悬挂且一定留下可读的终止记录）。
+
 ## 已知边界
 
 - 复用 App 登录态意味着：App 退出登录后，扩展会随之报未登录，需重新打开 App。

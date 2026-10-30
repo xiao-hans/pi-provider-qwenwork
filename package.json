@@ -1,7 +1,7 @@
 {
   "name": "@xiao-hans/pi-provider-qwenwork",
   "displayName": "Pi QwenWork Provider",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Pi 编码代理扩展：零配置复用千问办公（QwenWorkCN）桌面 App 的登录态，把它注册为 Pi 内的模型 Provider。",
   "license": "MIT",
