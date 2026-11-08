@@ -173,6 +173,7 @@ Pi 会话中保存的响应 ID 为 `chatcmpl-<requestId>`，可直接关联日�
 
 - 复用 App 登录态意味着：App 退出登录后，扩展会随之报未登录，需重新打开 App。
 - 上游对**超高重复输入**（如 `'测'.repeat(500)`）的 `pro` 档可能长时间不返首包，属上游行为，网关已加空闲超时兜底。
+- **思考链无法关闭**：QwenWork 网关服务端强制思考，实测对 `enable_thinking:false`、`chat_template_kwargs.enable_thinking:false`、`reasoning_effort:"none"` 等客户端字段全部无视（research/buddy2api-probes/probe-disable-thinking.mjs 五变体对照）。宿主设 thinking="off" 只是不请求思考，并不能关掉它。下游应从 thinking 块恢复正文（pi-hermes-memory 已内置该兜底）。
 - 千问办公 App 大版本升级偶发改变请求契约（历史上 1.0.6→1.2.0 曾因缺 `business` 字段恒定 503）。本扩展的签名逻辑随 `dsh-qwen-connect` 维护，若失效请回溯其排查手册。
 
 ## 许可
